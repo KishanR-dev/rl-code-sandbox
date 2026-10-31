@@ -98,6 +98,15 @@ uv run pytest -m "not docker" --cov=rl_sandbox --cov-fail-under=90
 uv run pytest -m "docker"
 ```
 
+### Review Loop
+Every Codex call for code reviews must use exactly:
+```powershell
+codex exec --sandbox read-only -c model_provider=openai -c model_reasoning_effort=high -m gpt-6-luna "<review prompt>"
+```
+- Max 6 rounds.
+- Stop and ask if the same issue repeats twice.
+- Codex stays read-only.
+
 ### Run Full Suite
 ```powershell
 uv run pytest --cov=rl_sandbox
