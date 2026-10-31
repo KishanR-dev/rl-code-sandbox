@@ -1,0 +1,79 @@
+[project]
+name = "rl-code-sandbox"
+version = "0.1.0"
+description = "Isolated code execution sandbox and deterministic reward evaluator"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.6.0",
+    "docker>=7.0.0",
+    "torch>=2.2.0",
+    "typer>=0.12.0",
+    "scikit-learn>=1.4.0",
+]
+
+[project.scripts]
+rl-sandbox = "rl_sandbox.cli.main:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+    "httpx>=0.27.0",
+    "types-docker>=7.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rl_sandbox"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108"]
+"src/rl_sandbox/sandbox/docker_provider.py" = ["S108", "S110"]
+"src/rl_sandbox/api/routes.py" = ["B008"]
+"scripts/**" = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+mypy_path = "src"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "docker: marks tests that require a live Docker daemon",
+]
+
+[tool.coverage.run]
+source = ["rl_sandbox"]
+omit = ["src/rl_sandbox/sandbox/docker_provider.py"]
+
+[tool.coverage.paths]
+source = ["src/rl_sandbox", "*/rl_sandbox"]

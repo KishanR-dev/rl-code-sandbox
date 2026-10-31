@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  offline-gate:
+    name: Offline Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Run Ruff Linter
+        run: ruff check .
+
+      - name: Run Ruff Formatter Check
+        run: ruff format --check .
+
+      - name: Run Mypy Strict Type Check
+        run: python -m mypy --strict src
+
+      - name: Run Pytest Offline Suite with Coverage
+        run: python -m pytest -m "not docker" --cov=rl_sandbox --cov-fail-under=90
+
+  docker-integration:
+    name: Docker Integration Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Pull Pinned Docker Base Image
+        run: docker pull python:3.11-slim@sha256:456ff8b5493f6634c0ff95589a07156976ceb1d620573e8fa918b935d2595fec
+
+      - name: Run Pytest Docker Integration Suite
+        run: python -m pytest -m "docker" -v
