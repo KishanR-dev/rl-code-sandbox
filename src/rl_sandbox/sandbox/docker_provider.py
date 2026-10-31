@@ -136,7 +136,11 @@ class DockerSandboxProvider(SandboxProvider):
         if self._container is None or self._client is None:
             return 1, "", "Container not provisioned"
 
-        encoded_code = base64.b64encode(code.encode("utf-8")).decode("ascii")
+        encoded_bytes = code.encode("utf-8")
+        if len(encoded_bytes) > 80_000:
+            return 1, "", "ERROR: Payload exceeds 80KB limit"
+
+        encoded_code = base64.b64encode(encoded_bytes).decode("ascii")
         exec_resp: dict[str, Any] = self._client.api.exec_create(
             self._container.id,
             [
@@ -152,18 +156,26 @@ class DockerSandboxProvider(SandboxProvider):
         )
         exec_id: str = exec_resp["Id"]
 
-        raw = self._client.api.exec_start(
+        demux_result = self._client.api.exec_start(
             exec_id,
             detach=False,
             tty=False,
             stream=False,
+            demux=True,
         )
-
-        output_text: str = raw.decode("utf-8", errors="replace") if raw else ""
+        stdout_bytes, stderr_bytes = (
+            demux_result if isinstance(demux_result, tuple) else (demux_result, None)
+        )
+        stdout_text: str = (
+            stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
+        )
+        stderr_text: str = (
+            stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
+        )
         exit_info = self._client.api.exec_inspect(exec_id)
         raw_code = exit_info["ExitCode"]
         exit_code: int = int(raw_code) if raw_code is not None else 1
-        return exit_code, output_text, ""
+        return exit_code, stdout_text, stderr_text
 
     async def _collect_memory_metrics(self) -> tuple[Optional[int], bool]:
         if self._container is None or self._client is None:

@@ -10,7 +10,11 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class CodeSubmission(BaseModel):
     """A candidate code submission to be executed in the sandbox."""
 
-    code: str = Field(..., description="Python source code to execute.")
+    code: str = Field(
+        ...,
+        max_length=40_000,
+        description="Python source code to execute.",
+    )
     task_id: str = Field(..., description="Unique identifier for the task.")
     candidate_id: str = Field(..., description="Unique identifier for this candidate.")
     timeout_seconds: float = Field(
@@ -28,6 +32,7 @@ class TestHarness(BaseModel):
 
     assertions: str = Field(
         ...,
+        max_length=40_000,
         description=(
             "Python source containing assert statements to validate the submission."
         ),

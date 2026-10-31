@@ -133,3 +133,42 @@ class TestDockerSandboxProvider:
         result = await provider.run(submission, harness)
         assert result.status == "PASSED"
         assert result.stats.exit_code == 0
+
+    @pytest.mark.asyncio
+    async def test_stdout_stderr_demux(
+        self,
+        provider: DockerSandboxProvider,
+    ) -> None:
+        submission = CodeSubmission(
+            code=(
+                "import sys\n"
+                "sys.stdout.write('out_msg\\n')\n"
+                "sys.stderr.write('err_msg\\n')\n"
+            ),
+            task_id="task-demux",
+            candidate_id="cand-demux",
+        )
+        harness = TestHarness(assertions="")
+        result = await provider.run(submission, harness)
+        assert result.status == "PASSED"
+        assert "out_msg" in result.stdout
+        assert "err_msg" in result.stderr
+        assert "err_msg" not in result.stdout
+        assert "out_msg" not in result.stderr
+
+    @pytest.mark.asyncio
+    async def test_oversized_payload_rejected(
+        self,
+        provider: DockerSandboxProvider,
+    ) -> None:
+        heavy_code = "print('🚀')\n" * 15000  # ~210KB UTF-8 source, over the 80,000-byte guard
+        submission = CodeSubmission.model_construct(
+            code=heavy_code,
+            task_id="task-heavy",
+            candidate_id="cand-heavy",
+            timeout_seconds=10.0,
+        )
+        harness = TestHarness(assertions="")
+        result = await provider.run(submission, harness)
+        assert result.stats.exit_code == 1
+        assert "ERROR: Payload exceeds 80KB limit" in result.stderr

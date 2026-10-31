@@ -63,6 +63,11 @@ class TestCodeSubmission:
         )
         assert s.timeout_seconds == 300.0
 
+    def test_code_exceeds_max_length(self) -> None:
+        long_code = "x = 1\n" * 8000  # >40,000 chars
+        with pytest.raises(ValidationError):
+            CodeSubmission(code=long_code, task_id="t1", candidate_id="c1")
+
 
 # ---------------------------------------------------------------------------
 # TestHarness
@@ -77,6 +82,11 @@ class TestTestHarness:
     def test_empty_assertions_allowed(self) -> None:
         h = TestHarness(assertions="")
         assert h.assertions == ""
+
+    def test_assertions_exceeds_max_length(self) -> None:
+        long_assertions = "assert True\n" * 5000  # >40,000 chars
+        with pytest.raises(ValidationError):
+            TestHarness(assertions=long_assertions)
 
 
 # ---------------------------------------------------------------------------
