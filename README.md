@@ -19,19 +19,23 @@ Repository: [https://github.com/KishanR-dev/rl-code-sandbox](https://github.com/
 
 ## Benchmark & Performance Metrics
 
-Metrics measured across a benchmark suite of 30 tasks containing algorithmic challenges, edge cases, and security test cases (network calls, fork bombs, file writes, and memory exhaustion).
+| Metric | Measured Value |
+| :--- | :--- |
+| **Total Tasks** | 30 |
+| **Candidates Evaluated** | 300 |
+| **Passed** | 180 |
+| **Failed** | 60 |
+| **Timeout** | 30 |
+| **Violation** | 30 |
+| **Reward 1.0 Count** | 180 |
+| **Reward 0.0 Count** | 90 |
+| **Reward -1.0 Count** | 30 |
+| **MLP Accuracy (Mean)** | 0.6667 |
+| **Baseline Accuracy (Mean)** | 0.6667 |
+| **MLP Brier Score (Mean)** | 0.2283 |
+| **Baseline Brier Score (Mean)** | 0.3333 |
 
-| Metric | Measured Value | Baseline / Target | Notes |
-| :--- | :--- | :--- | :--- |
-| **Total Benchmark Tasks** | *To be measured* | 30 tasks | Algorithmic, edge, and security cases |
-| **Test Pass Rate** | *To be measured* | Real run | Ratio of valid solutions passing assertions |
-| **Blocked-Violation Rate**| *To be measured* | 100% security cases | Security cases intercepted by AST/sandbox |
-| **Runtime Latency (p50)** | *To be measured* | Real run | Median execution time per task (ms) |
-| **Runtime Latency (p95)** | *To be measured* | Real run | 95th percentile execution time (ms) |
-| **Predictor Test Accuracy**| *To be measured* | Held-out 20% split | Small PyTorch MLP pass/fail prediction |
-| **Majority-Class Baseline**| *To be measured* | Held-out 20% split | Constant prediction of most frequent class |
-
-*Note: All values in this table will be populated directly from executed runs (`rl-sandbox benchmark` and `rl-sandbox train-predictor`).*
+Predictor result: the MLP matches the majority-class baseline on accuracy (0.6667) and has chance-level ROC AUC (0.5000) under 5-fold GroupKFold by task_id, so it does not separate passing from failing candidates on this benchmark. Its mean Brier score is lower (0.2283 vs 0.3333). Every task has the same candidate mix (6 pass, 2 fail, 1 timeout, 1 violation), which likely leaves the current features with no task-independent signal.
 
 ---
 

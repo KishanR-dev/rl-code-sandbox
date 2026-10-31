@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import time
 import types
 from typing import Any, Optional
@@ -102,8 +103,8 @@ class DockerSandboxProvider(SandboxProvider):
             raise RuntimeError("Docker client not initialized")
         return self._client.containers.create(
             self._image,
-            command=["python", "-"],
-            stdin_open=True,
+            command=["sleep", "infinity"],
+            user="1000:1000",
             tty=False,
             detach=True,
             network_mode="none",
@@ -135,27 +136,28 @@ class DockerSandboxProvider(SandboxProvider):
         if self._container is None or self._client is None:
             return 1, "", "Container not provisioned"
 
-        # Deliver code via stdin to `python -` — no persistent host bind mounts.
+        encoded_code = base64.b64encode(code.encode("utf-8")).decode("ascii")
         exec_resp: dict[str, Any] = self._client.api.exec_create(
             self._container.id,
-            ["python", "-"],
-            stdin=True,
+            [
+                "python",
+                "-c",
+                (
+                    "import os, base64; "
+                    "exec(base64.b64decode(os.environ['B64_CODE']).decode('utf-8'))"
+                ),
+            ],
+            environment={"B64_CODE": encoded_code},
+            user="1000:1000",
         )
         exec_id: str = exec_resp["Id"]
 
-        sock = self._client.api.exec_start(
+        raw = self._client.api.exec_start(
             exec_id,
             detach=False,
             tty=False,
             stream=False,
-            socket=True,
         )
-        try:
-            sock._sock.sendall(code.encode())  # type: ignore[union-attr]
-            sock._sock.shutdown(1)  # type: ignore[union-attr]
-            raw = sock.read()  # type: ignore[union-attr]
-        finally:
-            sock.close()
 
         output_text: str = raw.decode("utf-8", errors="replace") if raw else ""
         exit_info = self._client.api.exec_inspect(exec_id)

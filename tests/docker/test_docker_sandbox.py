@@ -118,3 +118,18 @@ class TestDockerSandboxProvider:
         result = await provider.run(passing_submission, passing_harness)
         assert result.stats.provisioning_time_ms >= 0.0
         assert result.stats.execution_time_ms >= 0.0
+
+    @pytest.mark.asyncio
+    async def test_user_is_unprivileged(
+        self,
+        provider: DockerSandboxProvider,
+    ) -> None:
+        submission = CodeSubmission(
+            code="import os; assert os.getuid() == 1000",
+            task_id="task-uid",
+            candidate_id="cand-uid",
+        )
+        harness = TestHarness(assertions="")
+        result = await provider.run(submission, harness)
+        assert result.status == "PASSED"
+        assert result.stats.exit_code == 0
