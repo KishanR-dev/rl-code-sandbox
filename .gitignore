@@ -19,3 +19,4 @@ htmlcov/
 *.log
 response.txt
 results.jsonl
+brag-output/
