@@ -12,7 +12,7 @@ Repository: [https://github.com/KishanR-dev/rl-code-sandbox](https://github.com/
 - **Offline Mock Provider**: Pure in-memory sandbox simulator for deterministic offline unit testing without external dependencies or subprocesses.
 - **Static Guardrails**: AST pre-execution filter intercepting disallowed imports (network, raw sockets, process manipulation).
 - **Deterministic Scorer**: Evaluates execution status, assertion pass rates, and runtime constraints into normalized scalar rewards.
-- **PyTorch Predictor**: Lightweight 2-layer MLP predicting pass/fail probabilities from static and dynamic execution features, benchmarked against a majority-class baseline.
+- **PyTorch Predictor**: Lightweight two-hidden-layer MLP predicting pass/fail probabilities from static and dynamic execution features, benchmarked against a majority-class baseline.
 - **Service & CLI**: Single-endpoint FastAPI service (`POST /evaluate`) accompanied by a unified command-line tool.
 
 ---
@@ -43,54 +43,75 @@ Predictor result: the MLP matches the majority-class baseline on accuracy (0.666
 
 ```
 rl-code-sandbox/
-├── PLAN.md
 ├── CHECKLIST.md
+├── DECISIONS.md
+├── PLAN.md
 ├── README.md
 ├── pyproject.toml
-├── ruff.toml
-├── mypy.ini
-├── pytest.ini
+├── uv.lock
+├── .github/
+│   ├── copilot-instructions.md
+│   └── workflows/
+│       └── ci.yml
+├── scripts/
+│   └── generate_fixtures.py
 ├── src/
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── app.py            # FastAPI service exposing POST /evaluate
-│   ├── benchmarks/
-│   │   ├── __init__.py
-│   │   ├── runner.py         # 30-task benchmark runner
-│   │   └── tasks.py          # Task definitions (algorithmic + adversarial)
-│   ├── cli/
-│   │   ├── __init__.py
-│   │   └── main.py           # CLI interface
-│   ├── domain/
-│   │   ├── __init__.py
-│   │   └── models.py         # Pydantic v2 schemas: Task, ExecutionRequest, ExecutionResult, Reward
-│   ├── evaluator/
-│   │   ├── __init__.py
-│   │   └── scorer.py         # Deterministic test and reward computation
-│   ├── ml/
-│   │   ├── __init__.py
-│   │   ├── dataset.py        # Dataset generation & train/test splits
-│   │   ├── features.py       # Code & execution feature extraction
-│   │   ├── model.py          # PyTorch MLP classifier
-│   │   └── train.py          # Training and baseline evaluation
-│   ├── sandbox/
-│   │   ├── __init__.py
-│   │   ├── base.py           # Abstract SandboxProvider protocol
-│   │   ├── docker.py         # DockerSandboxProvider (default seccomp, limits)
-│   │   └── mock.py           # MockSandboxProvider (pure in-memory)
-│   └── security/
+│   └── rl_sandbox/
 │       ├── __init__.py
-│       └── guardrail.py      # AST static security checks
+│       ├── py.typed
+│       ├── api/
+│       │   ├── __init__.py
+│       │   ├── app.py
+│       │   ├── routes.py
+│       │   └── schemas.py
+│       ├── benchmarks/
+│       │   ├── __init__.py
+│       │   ├── runner.py
+│       │   └── tasks/
+│       │       └── task-01 through task-30 .jsonl
+│       ├── cli/
+│       │   ├── __init__.py
+│       │   └── main.py
+│       ├── domain/
+│       │   ├── __init__.py
+│       │   ├── errors.py
+│       │   └── models.py
+│       ├── evaluator/
+│       │   ├── __init__.py
+│       │   └── reward.py
+│       ├── ml/
+│       │   ├── __init__.py
+│       │   ├── dataset.py
+│       │   ├── features.py
+│       │   └── predictor.py
+│       ├── sandbox/
+│       │   ├── __init__.py
+│       │   ├── base.py
+│       │   ├── docker_provider.py
+│       │   └── mock_provider.py
+│       └── security/
+│           ├── __init__.py
+│           └── ast_guard.py
 └── tests/
+    ├── __init__.py
     ├── conftest.py
-    ├── test_api.py
-    ├── test_benchmarks.py
-    ├── test_guardrails.py
-    ├── test_models.py
-    ├── test_predictor.py
-    ├── test_sandbox_docker.py # Marked @pytest.mark.docker
-    ├── test_sandbox_mock.py
-    └── test_scorer.py
+    ├── docker/
+    │   ├── __init__.py
+    │   └── test_docker_sandbox.py
+    ├── integration/
+    │   ├── __init__.py
+    │   ├── test_api_offline.py
+    │   ├── test_benchmark_runner.py
+    │   ├── test_cli_offline.py
+    │   └── test_ml_pipeline.py
+    └── unit/
+        ├── __init__.py
+        ├── test_ast_guard.py
+        ├── test_cli.py
+        ├── test_domain_models.py
+        ├── test_mock_provider.py
+        ├── test_reward_engine.py
+        └── test_sandbox_base.py
 ```
 
 ---
@@ -125,7 +146,7 @@ uv run ruff check .
 uv run ruff format --check .
 
 # Static type checking
-uv run mypy src tests
+uv run --python 3.11 mypy --strict src
 ```
 
 ---
@@ -134,29 +155,34 @@ uv run mypy src tests
 
 ### CLI
 ```bash
-# Evaluate code against test assertions
-uv run rl-sandbox evaluate --code "def solve(x): return x * 2" --test "assert solve(3) == 6"
+# Print version information
+uv run --python 3.11 rl-sandbox version
+
+# Evaluate a code submission against test assertions
+uv run --python 3.11 rl-sandbox run --code "def solve(x): return x * 2" --test "assert solve(3) == 6"
 
 # Run the 30-task benchmark suite
-uv run rl-sandbox benchmark
-
-# Train the PyTorch pass/fail predictor and compare against baseline
-uv run rl-sandbox train-predictor
+uv run --python 3.11 rl-sandbox benchmark --tasks-dir src/rl_sandbox/benchmarks/tasks
 ```
 
 ### HTTP Service
 ```bash
 # Start the FastAPI service
-uv run uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+uv run --python 3.11 uvicorn rl_sandbox.api.app:app --host 0.0.0.0 --port 8000
 
 # Submit an evaluation request
 curl -X POST http://localhost:8000/evaluate \
   -H "Content-Type: application/json" \
   -d '{
-    "code": "def add(a, b): return a + b",
-    "tests": "assert add(2, 3) == 5\nassert add(-1, 1) == 0",
-    "timeout_seconds": 2.0,
-    "memory_mb": 64
+    "submission": {
+      "code": "def add(a, b): return a + b",
+      "task_id": "task-1",
+      "candidate_id": "cand-1"
+    },
+    "harness": {
+      "assertions": "assert add(2, 3) == 5"
+    },
+    "use_mock": true
   }'
 ```
 
