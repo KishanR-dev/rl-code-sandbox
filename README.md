@@ -1,5 +1,9 @@
 # rl-code-sandbox
 
+
+https://github.com/user-attachments/assets/5b0e4c18-605c-4db4-aeb3-38bd5b39d7e0
+
+
 An async Python 3.11 service and CLI that executes model-generated code in isolated Docker sandboxes with CPU, memory, time, and network constraints, scores each execution using deterministic test suites, and logs evaluation traces. Includes an embedded PyTorch MLP to predict test pass/fail outcomes from code execution features.
 
 Repository: [https://github.com/KishanR-dev/rl-code-sandbox](https://github.com/KishanR-dev/rl-code-sandbox)
